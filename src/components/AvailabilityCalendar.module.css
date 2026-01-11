@@ -1,0 +1,58 @@
+.dayCell {
+    aspect-ratio: 1 / 1;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: var(--surface);
+    color: var(--text-main);
+    font-weight: 500;
+    -webkit-tap-highlight-color: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+.dayCell:hover:not(:disabled) {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    z-index: 2;
+}
+
+.dayCell:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.dimmed {
+    opacity: 0.4;
+    background-color: var(--background);
+    border-color: transparent;
+}
+
+.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: var(--background) !important;
+    color: var(--text-muted);
+}
+
+.statusIcon {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+
+.dateNumber {
+    font-size: 1rem;
+}
+
+@media (max-width: 400px) {
+    .dateNumber {
+        font-size: 0.9rem;
+    }
+}
