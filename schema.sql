@@ -66,6 +66,14 @@ CREATE TABLE public.shifts (
   UNIQUE(date, shift_role) -- Ensure only 1 of each role per day as per coverage rules
 );
 
+-- 5. SCHEDULE LOCKS (Admin Control)
+CREATE TABLE public.schedule_locks (
+  month_start DATE PRIMARY KEY, -- e.g. '2026-02-01'
+  is_locked BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by UUID REFERENCES public.users(id)
+);
+
 -- Row Level Security (RLS) policies would go here, 
 -- but for the MVP NextAuth adapter often bypasses RLS if using the service role key,
 -- or we handle it in application logic.

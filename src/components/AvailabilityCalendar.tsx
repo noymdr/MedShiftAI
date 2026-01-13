@@ -12,9 +12,10 @@ interface Props {
     constraints: Record<string, 'vacation' | 'blocked'>;
     doctorId: string;
     onMonthChange: (delta: number) => void;
+    isLocked: boolean;
 }
 
-export function AvailabilityCalendar({ currentMonth, constraints: initialConstraints, doctorId, onMonthChange }: Props) {
+export function AvailabilityCalendar({ currentMonth, constraints: initialConstraints, doctorId, onMonthChange, isLocked }: Props) {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
@@ -36,6 +37,8 @@ export function AvailabilityCalendar({ currentMonth, constraints: initialConstra
     );
 
     const handleToggleDate = async (dateStr: string) => {
+        if (isLocked) return; // Prevent action if locked
+
         const current = optimisticConstraints[dateStr];
         let next: 'vacation' | 'blocked' | null = null;
 
@@ -81,6 +84,7 @@ export function AvailabilityCalendar({ currentMonth, constraints: initialConstra
                     const isCurrentMonth = isSameMonth(day, monthStart);
                     const status = optimisticConstraints[dateStr];
                     const isPast = isBefore(day, today);
+                    const isDisabled = isPast || (isLocked && !isPast); // Locked disables future dates too.
 
                     let statusColor = undefined;
                     let icon = null;
@@ -97,10 +101,10 @@ export function AvailabilityCalendar({ currentMonth, constraints: initialConstra
                     return (
                         <button
                             key={dateStr}
-                            onClick={() => !isPast && handleToggleDate(dateStr)}
-                            className={clsx(styles.dayCell, !isCurrentMonth && styles.dimmed, isPast && styles.disabled)}
-                            style={{ backgroundColor: statusColor }}
-                            disabled={isPast}
+                            onClick={() => !isDisabled && handleToggleDate(dateStr)}
+                            className={clsx(styles.dayCell, !isCurrentMonth && styles.dimmed, isDisabled && styles.disabled)}
+                            style={{ backgroundColor: statusColor, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
+                            disabled={isDisabled}
                             aria-label={`Date ${dateStr}, status ${status}`}
                         >
                             <span className={styles.dateNumber}>{format(day, 'd')}</span>

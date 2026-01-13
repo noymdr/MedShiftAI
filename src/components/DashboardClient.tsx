@@ -1,33 +1,67 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation"; // Import useRouter
 import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import { ScheduleReview } from "@/components/ScheduleReview";
+import { AdminPanel } from "@/components/AdminPanel";
 import { Doctor } from "@/app/actions";
+import { format } from "date-fns";
 
 interface Props {
     doctor: Doctor;
     initialConstraints: Record<string, "vacation" | "blocked">;
     initialShifts: any[];
+    isAdmin: boolean;
+    initialLocks: { monthStart: string; isLocked: boolean }[];
+    currentMonthStr: string; // New prop
+    currentTab: 'availability' | 'schedule' | 'admin';
 }
 
-export function DashboardClient({ doctor, initialConstraints, initialShifts }: Props) {
-    const [activeTab, setActiveTab] = useState<'availability' | 'schedule'>('availability');
-    const [viewMonth, setViewMonth] = useState(new Date());
+export function DashboardClient({ doctor, initialConstraints, initialShifts, isAdmin, initialLocks, currentMonthStr, currentTab }: Props) {
+    const router = useRouter();
+    const [activeTab, setActiveTabState] = useState(currentTab);
+
+    // Parse the passed currentMonthStr
+    const viewMonth = new Date(currentMonthStr);
+
+    const setActiveTab = (tab: 'availability' | 'schedule' | 'admin') => {
+        setActiveTabState(tab);
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', tab);
+        // Ensure month is preserved in URL
+        if (!params.get('month')) {
+            params.set('month', format(viewMonth, 'yyyy-MM-dd'));
+        }
+        router.push(`/?${params.toString()}`);
+    };
 
     const handleMonthChange = (delta: number) => {
-        setViewMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
-        // In a real server-component architecture with URL state, we would router.push(`?month=...`)
-        // But for this hybrid approach, we might just keep local state and maybe refetch if valid.
-        // Since props are 'initial', changing month locally won't fetch new data unless we use server actions or SWR.
-        // For this step, let's assume we stick to the initial loaded month or implement fetch on change.
-        // To keep it simple: We just change the view. The calendar component handles formatting.
-        // Ideally, AvailabilityCalendar should trigger a data fetch if it moves outside the loaded range.
+        const newDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + delta, 1);
+        const newMonthStr = format(newDate, 'yyyy-MM-dd');
+        // Preserve active tab? Ideally yes, but maybe simpler to just set param
+        // If we want to keep tab valid, we might need to sync tab to URL too or just let it stay in state.
+        // Keeping tab in state is fine for now as it doesn't affect data fetching (except fetching different types of data... wait).
+        // page.tsx fetches data based on tab AND month.
+        // So we SHOULD update URL with tab as well if we want full persistence.
+        // But for "month lock" issue, month is key.
+        const params = new URLSearchParams(window.location.search);
+        params.set('month', newMonthStr);
+        params.set('tab', activeTab); // Sync tab to URL to ensure Page fetches correct data ( Shifts vs Constraints)
+        router.push(`/?${params.toString()}`);
     };
+
+    // Determine lock status for the current view month
+    const currentMonthStart = `${viewMonth.getFullYear()}-${String(viewMonth.getMonth() + 1).padStart(2, '0')}-01`;
+    const currentLock = initialLocks.find(l => l.monthStart === currentMonthStart);
+    const isLocked = currentLock ? currentLock.isLocked : false; // Default Open
+
+    // Admin Override Logic
+    const isRestricted = isLocked && !isAdmin;
 
     return (
         <div className="container" style={{ paddingBottom: '80px', paddingTop: '16px' }}>
-            {/* Header */}
+            {/* ... Header ... */}
             <header style={{
                 height: 'var(--header-height)',
                 display: 'flex',
@@ -58,7 +92,7 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts }: P
             {/* Navigation Tabs */}
             <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
+                gridTemplateColumns: isAdmin ? '1fr 1fr 1fr' : '1fr 1fr',
                 background: 'var(--surface)',
                 padding: '4px',
                 borderRadius: '16px',
@@ -80,7 +114,7 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts }: P
                         fontSize: '0.95rem'
                     }}
                 >
-                    My Availability
+                    Availability
                 </button>
                 <button
                     onClick={() => setActiveTab('schedule')}
@@ -96,8 +130,26 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts }: P
                         fontSize: '0.95rem'
                     }}
                 >
-                    View Schedule
+                    Schedule
                 </button>
+                {isAdmin && (
+                    <button
+                        onClick={() => setActiveTab('admin')}
+                        style={{
+                            padding: '12px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            background: activeTab === 'admin' ? 'var(--primary)' : 'transparent',
+                            color: activeTab === 'admin' ? 'white' : 'var(--text-secondary)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            fontSize: '0.95rem'
+                        }}
+                    >
+                        Admin
+                    </button>
+                )}
             </div>
 
             <main className="animate-enter">
@@ -105,16 +157,46 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts }: P
                     <>
                         <div style={{ marginBottom: '24px', textAlign: 'center' }}>
                             <h2 style={{ fontSize: '1.75rem', marginBottom: '8px', color: 'var(--text-main)' }}>Update Availability</h2>
-                            <p style={{ fontSize: '1rem' }}>Tap dates to mark <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Vacation</span> or <span style={{ color: 'var(--error)', fontWeight: 600 }}>Blocked</span>.</p>
+                            {isRestricted ? (
+                                <div style={{
+                                    display: 'inline-block',
+                                    padding: '8px 16px',
+                                    background: 'var(--error-bg)',
+                                    color: 'var(--error)',
+                                    borderRadius: '8px',
+                                    fontWeight: 600
+                                }}>
+                                    Month Locked by Admin
+                                </div>
+                            ) : (
+                                <>
+                                    {isLocked && isAdmin && (
+                                        <div style={{
+                                            display: 'inline-block',
+                                            marginBottom: '8px',
+                                            padding: '4px 12px',
+                                            background: '#fff3cd',
+                                            color: '#856404',
+                                            borderRadius: '12px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 600
+                                        }}>
+                                            Locked (Admin Override)
+                                        </div>
+                                    )}
+                                    <p style={{ fontSize: '1rem' }}>Tap dates to mark <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Vacation</span> or <span style={{ color: 'var(--error)', fontWeight: 600 }}>Blocked</span>.</p>
+                                </>
+                            )}
                         </div>
                         <AvailabilityCalendar
                             currentMonth={viewMonth}
                             constraints={initialConstraints}
                             doctorId={doctor.id}
                             onMonthChange={handleMonthChange}
+                            isLocked={isRestricted}
                         />
                     </>
-                ) : (
+                ) : activeTab === 'schedule' ? (
                     <>
                         <div style={{ marginBottom: '24px', textAlign: 'center' }}>
                             <h2 style={{ fontSize: '1.75rem', marginBottom: '8px' }}>Shift Schedule</h2>
@@ -122,6 +204,8 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts }: P
                         </div>
                         <ScheduleReview shifts={initialShifts} />
                     </>
+                ) : (
+                    <AdminPanel initialLocks={initialLocks} />
                 )}
             </main>
         </div>
