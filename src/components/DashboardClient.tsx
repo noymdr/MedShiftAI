@@ -279,7 +279,7 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts, isA
                             <h2 style={{ fontSize: '1.75rem', marginBottom: '8px' }}>Shift Schedule</h2>
                             <p style={{ fontSize: '1rem' }}>View upcoming shifts.</p>
                         </div>
-                        <ScheduleReview shifts={initialShifts} />
+                        <ScheduleReview shifts={initialShifts} doctorId={doctor.id} />
                     </>
                 ) : (
                     <AdminPanel initialLocks={initialLocks} />

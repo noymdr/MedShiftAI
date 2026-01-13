@@ -4,6 +4,12 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 // Types based on our Schema
+export type Schedule = {
+    id: string
+    month: string
+    status: 'draft' | 'final'
+}
+
 export type Doctor = {
     id: string
     full_name: string
@@ -15,6 +21,7 @@ export type Doctor = {
 
 export type Shift = {
     id: string
+    schedule_id: string
     date: string
     shift_role: 'Junior Resident' | 'Intermediate Resident' | 'Senior Resident' | 'Attending'
     doctor_id: string | null
@@ -87,8 +94,6 @@ export async function getMonthAvailability(doctorId: string, monthStart: string,
     return data
 }
 
-// ... imports
-
 // Helper to get month start from a date string (YYYY-MM-DD)
 function getMonthStart(dateStr: string) {
     const date = new Date(dateStr);
@@ -105,12 +110,7 @@ export async function getMonthLockStatus(monthStart: string) {
         .eq('month_start', monthStart)
         .single();
 
-    if (error || !data) return { isLocked: false }; // Default unlocked if no record? Or Locked? 
-    // Requirement: "lock the other user's ability". 
-    // Let's assume default is Unlocked unless explicitly Locked? 
-    // Schema says Default TRUE... 
-    // If no record exists, it usually means nobody touched it. Let's say it's Unlocked by default for UX, 
-    // until Admin explicitly creates a lock record.
+    if (error || !data) return { isLocked: false };
     return { isLocked: data.is_locked };
 }
 
@@ -186,12 +186,6 @@ export async function updateAvailability(doctorId: string, date: string, status:
     const { isLocked } = await getMonthLockStatus(monthStart);
 
     if (isLocked && !isAdmin) {
-        // If locked and NOT admin, block update.
-        // But what if the user is the Admin updating their own 'resident' profile? 
-        // Admin overrides all locks.
-        // What if User is updating their own profile?
-        // "The admin should have the capability to lock the other user's ability"
-        // So regular users are blocked. Admin is not.
         throw new Error("This month is locked for editing.");
     }
 
@@ -212,7 +206,23 @@ export async function updateAvailability(doctorId: string, date: string, status:
 
 export async function getShiftsForMonth(monthStart: string, monthEnd: string) {
     const supabase = await createClient();
-    // Join with doctors to get names
+
+    // 1. Find the Final Schedule for this month
+    // monthStart is typically YYYY-MM-01 from our frontend helpers
+    const { data: schedule, error: scheduleError } = await supabase
+        .from('schedules')
+        .select('id')
+        .eq('month', monthStart)
+        .eq('status', 'final')
+        .single();
+
+    if (scheduleError || !schedule) {
+        // No final schedule found for this month
+        console.log("No final schedule found for", monthStart);
+        return [];
+    }
+
+    // 2. Fetch shifts for this schedule
     const { data, error } = await supabase
         .from('shifts')
         .select(`
@@ -225,8 +235,9 @@ export async function getShiftsForMonth(monthStart: string, monthEnd: string) {
                 medical_role
             )
         `)
+        .eq('schedule_id', schedule.id)
         .gte('date', monthStart)
-        .lte('date', monthEnd)
+        .lte('date', monthEnd);
 
     if (error) {
         console.error("Error fetching shifts", error);

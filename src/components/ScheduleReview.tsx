@@ -9,9 +9,10 @@ import styles from './AvailabilityCalendar.module.css';
 
 interface Props {
     shifts: Shift[];
+    doctorId: string; // Current user's ID
 }
 
-export function ScheduleReview({ shifts }: Props) {
+export function ScheduleReview({ shifts, doctorId }: Props) {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -59,7 +60,7 @@ export function ScheduleReview({ shifts }: Props) {
                         const dayShifts = getShiftsForDate(day);
                         const isCurrentMonth = isSameMonth(day, monthStart);
                         const isSelected = selectedDate && isSameDay(day, selectedDate);
-                        const hasShift = dayShifts.length > 0;
+                        const hasMyShift = dayShifts.some(s => s.doctor_id === doctorId);
 
                         return (
                             <button
@@ -70,16 +71,17 @@ export function ScheduleReview({ shifts }: Props) {
                                     !isCurrentMonth && styles.dimmed,
                                 )}
                                 style={{
-                                    border: isSelected ? '2px solid var(--primary)' : undefined,
-                                    backgroundColor: isSelected ? 'var(--primary-light)' : undefined
+                                    border: isSelected ? '2px solid var(--primary)' : hasMyShift ? '2px solid var(--primary-light)' : undefined,
+                                    backgroundColor: isSelected ? 'var(--primary-light)' : hasMyShift ? '#F0FDFA' : undefined,
+                                    position: 'relative'
                                 }}
                             >
                                 <span className={styles.dateNumber}>{format(day, 'd')}</span>
-                                {hasShift && (
-                                    <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
-                                        {/* Simulating dots for shifts */}
-                                        <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--primary)' }} />
-                                    </div>
+                                {hasMyShift && (
+                                    <div style={{
+                                        position: 'absolute', top: 4, right: 4,
+                                        width: 6, height: 6, borderRadius: '50%', background: 'var(--primary)'
+                                    }} />
                                 )}
                             </button>
                         );
@@ -107,12 +109,14 @@ export function ScheduleReview({ shifts }: Props) {
                                 // Let's rely on the fact that we will pass the enriched object.
                                 const doctorName = (shift as any).doctors?.full_name || 'Unknown Doctor';
                                 const role = (shift as any).doctors?.medical_role || '';
+                                const isMyShift = shift.doctor_id === doctorId;
 
                                 return (
                                     <div key={shift.id} style={{
                                         padding: '12px',
                                         borderRadius: '12px',
-                                        background: 'var(--background)',
+                                        background: isMyShift ? 'var(--primary-bg)' : 'var(--background)',
+                                        border: isMyShift ? '1px solid var(--primary)' : '1px solid transparent',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'space-between'

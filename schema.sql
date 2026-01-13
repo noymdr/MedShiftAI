@@ -54,16 +54,29 @@ CREATE TABLE public.doctors_constraints (
   UNIQUE(doctor_id, date) -- One constraint status per day per doctor
 );
 
--- 4. SHIFTS (Schedule)
+-- 4. SCHEDULES (Container for Shifts)
+CREATE TYPE schedule_status_enum AS ENUM ('draft', 'final');
+
+CREATE TABLE public.schedules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    month DATE NOT NULL, -- First day of the month (YYYY-MM-01)
+    status schedule_status_enum DEFAULT 'draft',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(month, status) -- Ideally one Draft and one Final max? Or multiple drafts? specificy logic later. For now, let's keep it simple.
+);
+
+-- 5. SHIFTS (Schedule Entries)
 CREATE TYPE shift_role_enum AS ENUM ('Junior Resident', 'Intermediate Resident', 'Senior Resident', 'Attending');
 
 CREATE TABLE public.shifts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  schedule_id UUID REFERENCES public.schedules(id) ON DELETE CASCADE NOT NULL, -- Link to parent schedule
   date DATE NOT NULL,
   shift_role shift_role_enum NOT NULL,
   doctor_id UUID REFERENCES public.doctors(id) ON DELETE SET NULL, -- Nullable if slot is empty/unassigned
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(date, shift_role) -- Ensure only 1 of each role per day as per coverage rules
+  UNIQUE(schedule_id, date, shift_role) -- Scoped to schedule
 );
 
 -- 5. SCHEDULE LOCKS (Admin Control)
