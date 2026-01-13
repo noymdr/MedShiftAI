@@ -1,26 +1,26 @@
 :root {
-  /* Colors - Soft Clinic Theme - Blue/Slate Palette */
-  --primary: #2563EB;
-  /* Royal Blue */
-  --primary-hover: #1D4ED8;
-  --primary-light: #E0E7FF;
-  /* Indigo 100 */
-  --primary-bg: #EFF6FF;
-  /* Blue 50 */
+  /* Colors - MedShift Teal & Navy Theme */
+  --primary: #00B5AD;
+  /* Teal - Main Actions */
+  --primary-hover: #009E97;
+  --primary-light: #E0F2F1;
+  /* Teal 50 */
+  --primary-bg: #F0FDFA;
+  /* Teal 25 */
 
   --secondary: #64748B;
-  /* Slate 500 */
+  /* Slate 500 - Keep for neutral secondary elements */
 
   --background: #F8FAFC;
-  /* Slate 50 */
+  /* Slate 50 - Keep neutral background */
   --surface: #FFFFFF;
 
-  --text-main: #0F172A;
-  /* Slate 900 */
-  --text-secondary: #475569;
-  /* Slate 600 */
+  --text-main: #002B49;
+  /* Deep Navy - Headings */
+  --text-secondary: #33556D;
+  /* Muted Navy - Body */
   --text-muted: #94A3B8;
-  /* Slate 400 */
+  /* Slate 400 - Placeholder/Disabled */
 
   --border: #E2E8F0;
   /* Slate 200 */

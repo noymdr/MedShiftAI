@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { checkEmailWhitelist } from "@/app/actions";
 
@@ -86,14 +87,20 @@ export default function LoginPage() {
     return (
         <div className="flex-center" style={{ minHeight: '100vh', flexDirection: 'column', gap: '24px', padding: '16px' }}>
             <div className="card" style={{ width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px', padding: '32px' }}>
-                <div style={{ textAlign: 'center' }}>
-                    <h1 style={{ color: 'var(--primary)', marginBottom: '8px' }}>MedShift</h1>
-                    <p className="text-secondary">Sign in to manage your availability</p>
+                <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <Image
+                        src="/logo-login-ref.jpg"
+                        alt="MedShift AI Logo"
+                        width={600}
+                        height={240}
+                        style={{ objectFit: 'contain', mixBlendMode: 'multiply' }}
+                    />
+                    {/* <p className="text-secondary">Sign in to manage your availability</p> */}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                        <label htmlFor="email" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Hospital Email</label>
+                        {/* <label htmlFor="email" style={{ display: 'block', marginBottom: '8px', fontWeight: 500 }}>Hospital Email</label> Removed as per request */}
                         <input
                             id="email"
                             type="email"

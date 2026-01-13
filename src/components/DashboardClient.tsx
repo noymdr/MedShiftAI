@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation"; // Import useRouter
 import { AvailabilityCalendar } from "@/components/AvailabilityCalendar";
 import { ScheduleReview } from "@/components/ScheduleReview";
 import { AdminPanel } from "@/components/AdminPanel";
 import { Doctor } from "@/app/actions";
 import { format } from "date-fns";
+import { createClient } from "@/lib/supabase/client";
 
 interface Props {
     doctor: Doctor;
@@ -21,6 +23,27 @@ interface Props {
 export function DashboardClient({ doctor, initialConstraints, initialShifts, isAdmin, initialLocks, currentMonthStr, currentTab }: Props) {
     const router = useRouter();
     const [activeTab, setActiveTabState] = useState(currentTab);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const supabase = createClient();
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.refresh(); // Refresh to trigger server-side middleware redirect
+    };
 
     // Parse the passed currentMonthStr
     const viewMonth = new Date(currentMonthStr);
@@ -70,22 +93,76 @@ export function DashboardClient({ doctor, initialConstraints, initialShifts, isA
                 marginBottom: '8px'
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{
-                        width: 40, height: 40, background: 'var(--primary)', borderRadius: '12px',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '1.2rem'
-                    }}>
-                        M
-                    </div>
-                    <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>MedShift</h1>
+                    <Image
+                        src="/logo-v3.png"
+                        alt="MedShift AI Logo"
+                        width={320}
+                        height={80}
+                        style={{ objectFit: 'contain', objectPosition: 'left', cursor: 'pointer', mixBlendMode: 'multiply' }}
+                        onClick={() => router.push('/')}
+                    />
                 </div>
-                <div style={{
-                    width: 40, height: 40, borderRadius: '50%', background: 'white',
-                    border: '2px solid var(--primary-light)',
-                    color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600,
-                    overflow: 'hidden'
-                }}>
-                    {/* Initials */}
-                    {doctor.full_name ? doctor.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'DR'}
+
+                <div style={{ position: 'relative' }} ref={menuRef}>
+                    <button
+                        onClick={() => setIsMenuOpen(!isMenuOpen)}
+                        style={{
+                            width: 40, height: 40, borderRadius: '50%', background: 'white',
+                            border: '2px solid var(--primary-light)',
+                            color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600,
+                            overflow: 'hidden', cursor: 'pointer', outline: 'none'
+                        }}
+                    >
+                        {/* Initials */}
+                        {doctor.full_name ? doctor.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2) : 'DR'}
+                    </button>
+
+                    {isMenuOpen && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '120%',
+                            right: 0,
+                            background: 'var(--surface)',
+                            border: '1px solid var(--border)',
+                            borderRadius: '12px',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            padding: '8px',
+                            minWidth: '200px',
+                            zIndex: 50
+                        }}>
+                            <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)' }}>{doctor.full_name}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{doctor.medical_role}</div>
+                            </div>
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '10px 12px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: 'var(--error)',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    borderRadius: '8px',
+                                    fontWeight: 500,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--error-bg)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                            >
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                                Log out
+                            </button>
+                        </div>
+                    )}
                 </div>
             </header>
 
